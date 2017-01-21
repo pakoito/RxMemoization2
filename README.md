@@ -1,4 +1,4 @@
-# RxMemoization
+# RxMemoization2
 
 RxMemoization is a library to allow [memoization](https://en.wikipedia.org/wiki/Memoization) on RxJava function primitives.
 
@@ -70,7 +70,7 @@ or to your `pom.xml`
 
 ##License
 
-Copyright (c) pakoito 2016
+Copyright (c) pakoito 2017
 
 The Apache Software License, Version 2.0
 
