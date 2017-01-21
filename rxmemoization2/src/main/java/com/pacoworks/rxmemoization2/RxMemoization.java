@@ -18,19 +18,18 @@ package com.pacoworks.rxmemoization2;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
-import rx.functions.Func0;
-import rx.functions.Func1;
-import rx.functions.Func2;
-import rx.functions.Func3;
-import rx.functions.Func4;
-import rx.functions.Func5;
-import rx.functions.Func6;
-import rx.functions.Func7;
-import rx.functions.Func8;
-import rx.functions.Func9;
-import rx.functions.FuncN;
+import io.reactivex.functions.BiFunction;
+import io.reactivex.functions.Function;
+import io.reactivex.functions.Function3;
+import io.reactivex.functions.Function4;
+import io.reactivex.functions.Function5;
+import io.reactivex.functions.Function6;
+import io.reactivex.functions.Function7;
+import io.reactivex.functions.Function8;
+import io.reactivex.functions.Function9;
 
 /**
  * Helper class to memoize Functions to enable caching of results for same parameters.
@@ -47,16 +46,16 @@ public final class RxMemoization {
 
     /**
      * Return a new version of the function that caches results
-     * 
+     *
      * @param func0 function to wrap
      * @return function caching results
      */
-    public static <R> Func0<R> memoize(final Func0<R> func0) {
-        return new Func0<R>() {
+    public static <R> Callable<R> memoize(final Callable<R> func0) {
+        return new Callable<R>() {
             private R value;
 
             @Override
-            public R call() {
+            public R call() throws Exception {
                 if (null == value) {
                     synchronized (this) {
                         if (null == value) {
@@ -75,14 +74,14 @@ public final class RxMemoization {
      * @param func1 function to wrap
      * @return function caching results
      */
-    public static <A, R> Func1<A, R> memoize(final Func1<A, R> func1) {
+    public static <A, R> Function<A, R> memoize(final Function<A, R> func1) {
         final Map<A, R> results = new ConcurrentHashMap<A, R>();
-        return new Func1<A, R>() {
+        return new Function<A, R>() {
             @Override
-            public R call(A a) {
+            public R apply(A a) throws Exception {
                 final R cached = results.get(a);
                 if (null == cached) {
-                    final R result = func1.call(a);
+                    final R result = func1.apply(a);
                     results.put(a, result);
                     return result;
                 } else {
@@ -98,15 +97,15 @@ public final class RxMemoization {
      * @param func2 function to wrap
      * @return function caching results
      */
-    public static <A, B, R> Func2<A, B, R> memoize(final Func2<A, B, R> func2) {
+    public static <A, B, R> BiFunction<A, B, R> memoize(final BiFunction<A, B, R> func2) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func2<A, B, R>() {
+        return new BiFunction<A, B, R>() {
             @Override
-            public R call(A a, B b) {
+            public R apply(A a, B b) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func2.call(a, b);
+                    final R result = func2.apply(a, b);
                     results.put(args, result);
                     return result;
                 } else {
@@ -122,15 +121,15 @@ public final class RxMemoization {
      * @param func3 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, R> Func3<A, B, C, R> memoize(final Func3<A, B, C, R> func3) {
+    public static <A, B, C, R> Function3<A, B, C, R> memoize(final Function3<A, B, C, R> func3) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func3<A, B, C, R>() {
+        return new Function3<A, B, C, R>() {
             @Override
-            public R call(A a, B b, C c) {
+            public R apply(A a, B b, C c) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func3.call(a, b, c);
+                    final R result = func3.apply(a, b, c);
                     results.put(args, result);
                     return result;
                 } else {
@@ -146,15 +145,15 @@ public final class RxMemoization {
      * @param func4 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, D, R> Func4<A, B, C, D, R> memoize(final Func4<A, B, C, D, R> func4) {
+    public static <A, B, C, D, R> Function4<A, B, C, D, R> memoize(final Function4<A, B, C, D, R> func4) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func4<A, B, C, D, R>() {
+        return new Function4<A, B, C, D, R>() {
             @Override
-            public R call(A a, B b, C c, D d) {
+            public R apply(A a, B b, C c, D d) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c, d);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func4.call(a, b, c, d);
+                    final R result = func4.apply(a, b, c, d);
                     results.put(args, result);
                     return result;
                 } else {
@@ -170,16 +169,16 @@ public final class RxMemoization {
      * @param func5 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, D, E, R> Func5<A, B, C, D, E, R> memoize(
-            final Func5<A, B, C, D, E, R> func5) {
+    public static <A, B, C, D, E, R> Function5<A, B, C, D, E, R> memoize(
+            final Function5<A, B, C, D, E, R> func5) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func5<A, B, C, D, E, R>() {
+        return new Function5<A, B, C, D, E, R>() {
             @Override
-            public R call(A a, B b, C c, D d, E e) {
+            public R apply(A a, B b, C c, D d, E e) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c, d, e);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func5.call(a, b, c, d, e);
+                    final R result = func5.apply(a, b, c, d, e);
                     results.put(args, result);
                     return result;
                 } else {
@@ -195,16 +194,16 @@ public final class RxMemoization {
      * @param func6 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, D, E, F, R> Func6<A, B, C, D, E, F, R> memoize(
-            final Func6<A, B, C, D, E, F, R> func6) {
+    public static <A, B, C, D, E, F, R> Function6<A, B, C, D, E, F, R> memoize(
+            final Function6<A, B, C, D, E, F, R> func6) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func6<A, B, C, D, E, F, R>() {
+        return new Function6<A, B, C, D, E, F, R>() {
             @Override
-            public R call(A a, B b, C c, D d, E e, F f) {
+            public R apply(A a, B b, C c, D d, E e, F f) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c, d, e, f);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func6.call(a, b, c, d, e, f);
+                    final R result = func6.apply(a, b, c, d, e, f);
                     results.put(args, result);
                     return result;
                 } else {
@@ -220,16 +219,16 @@ public final class RxMemoization {
      * @param func7 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, D, E, F, G, R> Func7<A, B, C, D, E, F, G, R> memoize(
-            final Func7<A, B, C, D, E, F, G, R> func7) {
+    public static <A, B, C, D, E, F, G, R> Function7<A, B, C, D, E, F, G, R> memoize(
+            final Function7<A, B, C, D, E, F, G, R> func7) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func7<A, B, C, D, E, F, G, R>() {
+        return new Function7<A, B, C, D, E, F, G, R>() {
             @Override
-            public R call(A a, B b, C c, D d, E e, F f, G g) {
+            public R apply(A a, B b, C c, D d, E e, F f, G g) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c, d, e, f, g);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func7.call(a, b, c, d, e, f, g);
+                    final R result = func7.apply(a, b, c, d, e, f, g);
                     results.put(args, result);
                     return result;
                 } else {
@@ -245,16 +244,16 @@ public final class RxMemoization {
      * @param func8 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, D, E, F, G, H, R> Func8<A, B, C, D, E, F, G, H, R> memoize(
-            final Func8<A, B, C, D, E, F, G, H, R> func8) {
+    public static <A, B, C, D, E, F, G, H, R> Function8<A, B, C, D, E, F, G, H, R> memoize(
+            final Function8<A, B, C, D, E, F, G, H, R> func8) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func8<A, B, C, D, E, F, G, H, R>() {
+        return new Function8<A, B, C, D, E, F, G, H, R>() {
             @Override
-            public R call(A a, B b, C c, D d, E e, F f, G g, H h) {
+            public R apply(A a, B b, C c, D d, E e, F f, G g, H h) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c, d, e, f, g, h);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func8.call(a, b, c, d, e, f, g, h);
+                    final R result = func8.apply(a, b, c, d, e, f, g, h);
                     results.put(args, result);
                     return result;
                 } else {
@@ -270,40 +269,16 @@ public final class RxMemoization {
      * @param func9 function to wrap
      * @return function caching results
      */
-    public static <A, B, C, D, E, F, G, H, I, R> Func9<A, B, C, D, E, F, G, H, I, R> memoize(
-            final Func9<A, B, C, D, E, F, G, H, I, R> func9) {
+    public static <A, B, C, D, E, F, G, H, I, R> Function9<A, B, C, D, E, F, G, H, I, R> memoize(
+            final Function9<A, B, C, D, E, F, G, H, I, R> func9) {
         final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new Func9<A, B, C, D, E, F, G, H, I, R>() {
+        return new Function9<A, B, C, D, E, F, G, H, I, R>() {
             @Override
-            public R call(A a, B b, C c, D d, E e, F f, G g, H h, I i) {
+            public R apply(A a, B b, C c, D d, E e, F f, G g, H h, I i) throws Exception {
                 final ArgStorage args = new ArgStorage(a, b, c, d, e, f, g, h, i);
                 final R cached = results.get(args);
                 if (null == cached) {
-                    final R result = func9.call(a, b, c, d, e, f, g, h, i);
-                    results.put(args, result);
-                    return result;
-                } else {
-                    return cached;
-                }
-            }
-        };
-    }
-
-    /**
-     * Return a new version of the function that caches results
-     *
-     * @param funcN function to wrap
-     * @return function caching results
-     */
-    public static <R> FuncN<R> memoize(final FuncN<R> funcN) {
-        final Map<ArgStorage, R> results = new ConcurrentHashMap<ArgStorage, R>();
-        return new FuncN<R>() {
-            @Override
-            public R call(Object... objects) {
-                ArgStorage args = new ArgStorage(objects);
-                final R cached = results.get(args);
-                if (null == cached) {
-                    final R result = funcN.call(args.storage);
+                    final R result = func9.apply(a, b, c, d, e, f, g, h, i);
                     results.put(args, result);
                     return result;
                 } else {
