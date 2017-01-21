@@ -20,40 +20,39 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import rx.Observable;
-import rx.functions.Action0;
-import rx.functions.Action1;
-import rx.functions.Func0;
-import rx.functions.Func1;
-import rx.functions.Func2;
-import rx.functions.Func3;
-import rx.functions.Func4;
-import rx.functions.Func5;
-import rx.functions.Func6;
-import rx.functions.Func7;
-import rx.functions.Func8;
-import rx.functions.Func9;
-import rx.functions.FuncN;
-import rx.schedulers.Schedulers;
+import io.reactivex.Observable;
+import io.reactivex.functions.Action;
+import io.reactivex.functions.BiFunction;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.functions.Function3;
+import io.reactivex.functions.Function4;
+import io.reactivex.functions.Function5;
+import io.reactivex.functions.Function6;
+import io.reactivex.functions.Function7;
+import io.reactivex.functions.Function8;
+import io.reactivex.functions.Function9;
+import io.reactivex.schedulers.Schedulers;
 
 public class RxMemoizationTest {
     private static final MyObject INSTANCE = new MyObject();
 
-    private static final List<MyObject> INSTANCES = rx.Observable.range(0, 1000)
-            .map(new Func1<Integer, MyObject>() {
+    private static final List<MyObject> INSTANCES = Observable.range(0, 1000)
+            .map(new Function<Integer, MyObject>() {
                 @Override
-                public MyObject call(Integer integer) {
+                public MyObject apply(Integer integer) {
                     return new MyObject(integer);
                 }
-            }).toList().toBlocking().first();
+            }).toList().blockingGet();
 
     @Test
-    public void testMemoize() {
+    public void testMemoize0() {
         final AtomicInteger count = new AtomicInteger(0);
-        final Func0<MyObject> memoized = RxMemoization.memoize(new Func0<MyObject>() {
+        final Callable<MyObject> memoized = RxMemoization.memoize(new Callable<MyObject>() {
             @Override
             public MyObject call() {
                 count.incrementAndGet();
@@ -64,230 +63,230 @@ public class RxMemoizationTest {
         final int threadCount = 10000;
         final int maxDelay = 100;
         Iterable<Observable<Long>> observableList = Observable.range(0, threadCount)
-                .map(new Func1<Integer, Observable<Long>>() {
+                .map(new Function<Integer, Observable<Long>>() {
                     @Override
-                    public Observable<Long> call(final Integer integer) {
+                    public Observable<Long> apply(final Integer integer) {
                         return Observable
                                 .timer((long)(Math.random() * maxDelay), TimeUnit.MILLISECONDS)
-                                .doOnNext(new Action1<Long>() {
+                                .doOnNext(new Consumer<Long>() {
                                     @Override
-                                    public void call(Long aLong) {
+                                    public void accept(Long aLong) throws Exception {
                                         memoized.call();
                                         memoized.call();
                                         memoized.call();
                                         memoized.call();
                                         memoized.call();
                                     }
-                                }).doOnCompleted(new Action0() {
+                                }).doOnComplete(new Action() {
                                     @Override
-                                    public void call() {
+                                    public void run() {
                                         System.out.println("Test-" + integer);
                                     }
                                 }).subscribeOn(Schedulers.newThread());
                     }
-                }).toList().toBlocking().first();
-        Observable.merge(observableList).toBlocking().forEach(new Action1<Long>() {
+                }).toList().blockingGet();
+        Observable.merge(observableList).blockingForEach(new Consumer<Long>() {
             @Override
-            public void call(Long o) {
+            public void accept(Long o) {
             }
         });
         Assert.assertEquals(1, count.get());
     }
 
     @Test
-    public void testMemoize1() {
+    public void testMemoize1() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func1<Integer, MyObject> memoized = RxMemoization.memoize(new Func1<Integer, MyObject>() {
+        Function<Integer, MyObject> memoized = RxMemoization.memoize(new Function<Integer, MyObject>() {
             @Override
-            public MyObject call(Integer integer) {
+            public MyObject apply(Integer integer) {
                 count.incrementAndGet();
                 return INSTANCES.get(integer);
             }
         });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(30));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(30));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(30));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(30));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(30));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(30));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize2() {
+    public void testMemoize2() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func2<Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func2<Integer, Integer, MyObject>() {
+        BiFunction<Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new BiFunction<Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2) {
+                    public MyObject apply(Integer integer, Integer integer2) {
                         count.incrementAndGet();
                         return INSTANCES.get(integer + integer2);
                     }
                 });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(15, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(15, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(15, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(15, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(15, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(15, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize3() {
+    public void testMemoize3() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func3<Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func3<Integer, Integer, Integer, MyObject>() {
+        Function3<Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function3<Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3) {
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3) {
                         count.incrementAndGet();
                         return INSTANCES.get(integer + integer2 + integer3);
                     }
                 });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize4() {
+    public void testMemoize4() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func4<Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func4<Integer, Integer, Integer, Integer, MyObject>() {
+        Function4<Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function4<Integer, Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3,
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3,
                             Integer integer4) {
                         count.incrementAndGet();
                         return INSTANCES.get(integer + integer2 + integer3 + integer4);
                     }
                 });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize5() {
+    public void testMemoize5() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func5<Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func5<Integer, Integer, Integer, Integer, Integer, MyObject>() {
+        Function5<Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function5<Integer, Integer, Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3,
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3,
                             Integer integer4, Integer integer5) {
                         count.incrementAndGet();
                         return INSTANCES.get(integer + integer2 + integer3 + integer4 + integer5);
                     }
                 });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize6() {
+    public void testMemoize6() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func6<Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func6<Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
+        Function6<Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function6<Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3,
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3,
                             Integer integer4, Integer integer5, Integer integer6) {
                         count.incrementAndGet();
                         return INSTANCES.get(integer + integer2 + integer3 + integer4 + integer5
                                 + integer6);
                     }
                 });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize7() {
+    public void testMemoize7() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func7<Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func7<Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
+        Function7<Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function7<Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3,
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3,
                             Integer integer4, Integer integer5, Integer integer6, Integer integer7) {
                         count.incrementAndGet();
                         return INSTANCES.get(integer + integer2 + integer3 + integer4 + integer5
                                 + integer6 + integer7);
                     }
                 });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 0, 15, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 0, 15, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 0, 15, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 0, 15, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 0, 15, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 0, 15, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0));
         Assert.assertEquals(3, count.get());
     }
 
     @Test
-    public void testMemoize8() {
+    public void testMemoize8() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func8<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func8<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
+        Function8<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function8<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3,
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3,
                             Integer integer4, Integer integer5, Integer integer6, Integer integer7,
                             Integer integer8) {
                         count.incrementAndGet();
@@ -296,32 +295,32 @@ public class RxMemoizationTest {
                     }
                 });
         // +1
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0));
         // +1
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 0, 1));
         // +1
-        Assert.assertEquals(INSTANCES.get(45), memoized.call(15, 0, 15, 0, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(45), memoized.apply(15, 0, 15, 0, 0, 0, 0, 15));
         // +1
-        Assert.assertEquals(INSTANCES.get(45), memoized.call(0, 15, 15, 0, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(45), memoized.apply(0, 15, 15, 0, 0, 0, 0, 15));
         // +1
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 0, 15, 0, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 0, 15, 0, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0));
         Assert.assertEquals(5, count.get());
     }
 
     @Test
-    public void testMemoize9() {
+    public void testMemoize9() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
-        Func9<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
-                .memoize(new Func9<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
+        Function9<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject> memoized = RxMemoization
+                .memoize(new Function9<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer, MyObject>() {
                     @Override
-                    public MyObject call(Integer integer, Integer integer2, Integer integer3,
+                    public MyObject apply(Integer integer, Integer integer2, Integer integer3,
                             Integer integer4, Integer integer5, Integer integer6, Integer integer7,
                             Integer integer8, Integer integer9) {
                         count.incrementAndGet();
@@ -330,51 +329,23 @@ public class RxMemoizationTest {
                     }
                 });
         // +1
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 0));
         // +1
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 1));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 1));
+        Assert.assertEquals(INSTANCES.get(1), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 1));
         // +1
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(15, 0, 0, 0, 0, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(15, 0, 0, 0, 0, 0, 0, 0, 15));
         // +1
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 15, 0, 0, 0, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 15, 0, 0, 0, 0, 0, 0, 15));
         // +1
-        Assert.assertEquals(INSTANCES.get(30), memoized.call(0, 0, 15, 0, 0, 0, 0, 0, 15));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(30), memoized.apply(0, 0, 15, 0, 0, 0, 0, 0, 15));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        Assert.assertEquals(INSTANCES.get(0), memoized.apply(0, 0, 0, 0, 0, 0, 0, 0, 0));
         Assert.assertEquals(5, count.get());
-    }
-
-    @Test
-    public void testMemoizeN() {
-        final AtomicInteger count = new AtomicInteger(0);
-        FuncN<MyObject> memoized = RxMemoization.memoize(new FuncN<MyObject>() {
-            @Override
-            public MyObject call(Object... args) {
-                count.incrementAndGet();
-                return INSTANCES.get(args.length);
-            }
-        });
-        Assert.assertEquals(INSTANCES.get(0), memoized.call());
-        Assert.assertEquals(INSTANCES.get(0), memoized.call());
-        Assert.assertEquals(INSTANCES.get(0), memoized.call());
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(1), memoized.call(0));
-        Assert.assertEquals(INSTANCES.get(5), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(5), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(5), memoized.call(0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(12), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(12), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(12), memoized.call(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-        Assert.assertEquals(INSTANCES.get(0), memoized.call());
-        Assert.assertEquals(INSTANCES.get(0), memoized.call());
-        Assert.assertEquals(INSTANCES.get(0), memoized.call());
-        Assert.assertEquals(4, count.get());
     }
 
     private static final class MyObject {
