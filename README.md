@@ -1,19 +1,21 @@
 # RxMemoization2
 
-RxMemoization is a library to allow [memoization](https://en.wikipedia.org/wiki/Memoization) on RxJava function primitives.
+RxMemoization2 is a library to allow [memoization](https://en.wikipedia.org/wiki/Memoization) on RxJava function interfaces.
+
+For the RxJava 1.X version please go to [RxMemoization](https://github.com/pakoito/RxMemoization).
 
 ##Rationale
 
 Memoization stores the results of a function for the same set of parameters, which makes it useful for caching heavy computations that are called often with the same values.
 
-Storage scales linearly inside a `ConcurrentHashMap`, and it gets garbage collected when the function object goes out of scope. Caching is thread safe but a calculation can very rarely happen twice due to [`ConcurrentHashMap`](https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentHashMap.html) limitations. 
+Storage scales linearly inside a `ConcurrentHashMap`, and it gets garbage collected when the function object goes out of scope. Caching is thread safe but a calculation can very rarely happen twice due to [`ConcurrentHashMap`](https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentHashMap.html) limitations.
 
 ##Usage
 
-`RxMemoization` contains one class with a set of `memoize()` methods to do memoization for any FuncN from Func0 to Func9.
+`RxMemoization` contains one class with a set of `memoize()` methods to do memoization for any FunctionN from `Callable`, `Function`, `BiFunction`, and `Function3` up to `Function9`.
 
 ```java
-Func1<String, Integer> parser = 
+Function<String, Integer> parser = 
         RxMemoization.memoize((String s) ->
                                 {   System.out.println(s);
                                     return Integer.parseInt(s); });
@@ -47,7 +49,7 @@ repositories {
     
 dependencies {
     ...
-    compile 'com.github.pakoito:RxMemoization:1.1.0'
+    compile 'com.github.pakoito:RxMemoization2:1.0.0'
     ...
 }
 ```
@@ -63,8 +65,8 @@ or to your `pom.xml`
 
 <dependency>
     <groupId>com.github.pakoito</groupId>
-    <artifactId>RxMemoization</artifactId>
-    <version>1.1.0</version>
+    <artifactId>RxMemoization2</artifactId>
+    <version>1.0.0</version>
 </dependency>
 ```
 
