@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pacoworks.rxmemoization;
+package com.pacoworks.rxmemoization2;
 
 import org.junit.Assert;
 import org.junit.Test;
